@@ -1,0 +1,3 @@
+timestamp,campaign_name,client,market,investment,media_echo,creator_echo,community_echo,tev,roi_m,roi_pct
+2025-11-15T23:04:03.476879,Test A,Rayban,Thailand,10000000.0,1950000.0,4028000.0,4102366.25,10080366.25,1.008036625,0.8036625000000001
+2025-11-15T23:06:26.071512,Test B,Spotify,Vietnam,1000000.0,1350000.0,2716000.0,2535575.0,6601575.0,6.601575,560.1575

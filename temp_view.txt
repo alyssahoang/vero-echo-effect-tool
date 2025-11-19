@@ -1,0 +1,234 @@
+>             if st.button("Next: Media & Creator inputs"):
+                  st.session_state["campaign_info"] = {
+                      "campaign_name": campaign_name,
+                      "campaign_client": client,
+                      "campaign_market": market,
+                      "campaign_objective": objective,
+                      "campaign_investment": inv,
+                  }
+                  go_to_next_step("Campaign Info")
+          else:
+              st.info("Fill all required fields (name, client, investment > 0) to continue.")
+  
+      elif wizard_step == "Inputs & Uploads":
+>         st.subheader("2. Media & Creator Inputs")
+  
+          default_media_cards = [
+              {"channel_type": "Online Article", "tier_name": "Major", "mentions": 0},
+              {"channel_type": "Online Article", "tier_name": "Industry", "mentions": 0},
+              {"channel_type": "Online Article", "tier_name": "Local/Niche", "mentions": 0},
+              {"channel_type": "Social Media", "tier_name": "Tier 1", "mentions": 0},
+              {"channel_type": "Social Media", "tier_name": "Tier 2", "mentions": 0},
+              {"channel_type": "Social Media", "tier_name": "Tier 3", "mentions": 0},
+          ]
+          st.session_state.setdefault("media_cards", default_media_cards)
+  
+          with st.form("media_cards_form"):
+              for idx, card in enumerate(st.session_state["media_cards"]):
+                  with st.expander(f"{card['channel_type']} – {card['tier_name']}", expanded=True):
+                      channel_options = ["Online Article", "Social Media"]
+                      current_index = channel_options.index(card["channel_type"]) if card["channel_type"] in channel_options else 0
+                      st.session_state["media_cards"][idx]["channel_type"] = st.selectbox(
+                          "Channel Type",
+                          channel_options,
+                          index=current_index,
+                          key=f"media_channel_{idx}",
+                      )
+                      st.session_state["media_cards"][idx]["tier_name"] = st.text_input(
+                          "Tier",
+                          value=card["tier_name"],
+                          key=f"media_tier_{idx}",
+                      )
+                      st.session_state["media_cards"][idx]["mentions"] = st.number_input(
+                          "Mentions / Posts",
+                          min_value=0.0,
+                          value=float(card.get("mentions", 0)),
+                          step=1.0,
+                          key=f"media_mentions_{idx}",
+                      )
+              if st.form_submit_button("Save Media Inputs"):
+                  media_df = pd.DataFrame(st.session_state["media_cards"])
+                  st.session_state["media_editor"] = media_df
+                  st.success("Media inputs saved.")
+  
+          st.markdown("### Creator Inputs")
+          tab_upload, tab_manual = st.tabs(["Import Fanpage Karma", "Manual entry"])
+          with tab_upload:
+              st.info("Upload your Fanpage Karma Top 500 posts export to pre-fill creator inputs.")
+              uploaded = st.file_uploader("Upload .xlsx file", type=["xlsx"], key="creator_upload_primary")
+              disabled = uploaded is None
+              if st.button("Parse & summarize upload", disabled=disabled):
+                  if uploaded is None:
+                      st.error("Attach a file first.")
+                  else:
+                      try:
+                          creator_df, summary = parse_creator_upload(uploaded)
+                          st.session_state["creator_editor"] = creator_df
+                          st.session_state["creator_upload_summary"] = summary
+                          st.success("Creator upload parsed successfully.")
+                      except Exception as exc:
+                          st.error(f"Failed to parse upload: {exc}")
+              summary = st.session_state.get("creator_upload_summary")
+              if summary:
+                  platform_lines = ", ".join(
+                      f"{platform}: {count}"
+                      for platform, count in summary["platform_breakdown"].items()
+                  )
+                  st.success(
+                      f"Parsed {summary['total_posts']} posts from {summary['unique_creators']} creators. "
+                      f"Platform breakdown: {platform_lines or 'N/A'}."
+                  )
+          with tab_manual:
+              default_creator_cards = [
+                  {"platform": "Facebook", "content_type": "Static Post", "tier": "Macro", "num_posts": 0},
+                  {"platform": "Instagram", "content_type": "Static Post", "tier": "Macro", "num_posts": 0},
+                  {"platform": "TikTok", "content_type": "Video Post", "tier": "Macro", "num_posts": 0},
+              ]
+              st.session_state.setdefault("creator_cards", default_creator_cards)
+              with st.form("creator_cards_form"):
+                  platform_options = ["Facebook", "Instagram", "TikTok", "YouTube", "X (Twitter)", "Other"]
+                  content_options = ["Static Post", "Video Post", "Story/Reel"]
+                  tier_options = ["Mega", "Macro", "Mid-tier", "Micro", "Nano"]
+  
+                  for idx, card in enumerate(st.session_state["creator_cards"]):
+                      with st.expander(f"{card['platform']} – {card['tier']}", expanded=True):
+                          platform_index = platform_options.index(card["platform"]) if card["platform"] in platform_options else 0
+                          st.session_state["creator_cards"][idx]["platform"] = st.selectbox(
+                              "Platform",
+                              platform_options,
+                              index=platform_index,
+                              key=f"creator_platform_{idx}",
+                          )
+                          content_index = content_options.index(card["content_type"]) if card["content_type"] in content_options else 0
+                          st.session_state["creator_cards"][idx]["content_type"] = st.selectbox(
+                              "Content Type",
+                              content_options,
+                              index=content_index,
+                              key=f"creator_type_{idx}",
+                          )
+                          tier_index = tier_options.index(card["tier"]) if card["tier"] in tier_options else 1
+                          st.session_state["creator_cards"][idx]["tier"] = st.selectbox(
+                              "Tier",
+                              tier_options,
+                              index=tier_index,
+                              key=f"creator_tier_{idx}",
+                          )
+                          st.session_state["creator_cards"][idx]["num_posts"] = st.number_input(
+                              "Number of posts",
+                              min_value=0.0,
+                              value=float(card.get("num_posts", 0)),
+                              step=1.0,
+                              key=f"creator_posts_{idx}",
+                          )
+                  if st.form_submit_button("Save Creator Inputs"):
+                      st.session_state["creator_editor"] = pd.DataFrame(st.session_state["creator_cards"])
+                      st.success("Creator inputs saved.")
+          with tab_upload:
+              st.info("Upload your Fanpage Karma Top 500 posts export to pre-fill creator inputs.")
+              uploaded = st.file_uploader("Upload .xlsx file", type=["xlsx"], key="creator_upload_manual")
+              if uploaded is not None:
+                  st.session_state["creator_upload_file"] = uploaded
+                  st.success("File stored in session. Parser to be implemented.")
+              elif "creator_upload_file" in st.session_state:
+                  st.warning("No file selected. Previous upload cleared.")
+                  st.session_state.pop("creator_upload_file", None)
+  
+          media_ready = isinstance(st.session_state.get("media_editor"), pd.DataFrame)
+          creator_ready = isinstance(st.session_state.get("creator_editor"), pd.DataFrame) or (
+              "creator_upload_summary" in st.session_state
+          )
+          inputs_complete = bool(media_ready and creator_ready)
+          st.session_state["wizard_completed"]["Inputs & Uploads"] = inputs_complete
+          if inputs_complete:
+              if st.button("Next: Community inputs"):
+                  go_to_next_step("Inputs & Uploads")
+          else:
+              st.info("Provide media and creator data (manual or upload) to continue.")
+  
+      elif wizard_step == "Community":
+          st.subheader("3. Community Echo Inputs")
+          comm_default = pd.DataFrame(
+              [
+                  {
+                      "platform": "Facebook",
+                      "content_creation": 0,
+                      "passive_engagement": 0,
+                      "active_engagement": 0,
+                      "amplification": 0,
+                  },
+                  {
+                      "platform": "Instagram",
+                      "content_creation": 0,
+                      "passive_engagement": 0,
+                      "active_engagement": 0,
+                      "amplification": 0,
+                  },
+              ]
+          )
+          st.session_state.setdefault("community_cards", comm_default.to_dict("records"))
+          with st.form("community_cards_form"):
+              platform_options = ["Facebook", "Instagram", "TikTok", "YouTube", "X (Twitter)", "Other"]
+              for idx, card in enumerate(st.session_state["community_cards"]):
+                  with st.expander(f"{card['platform']}", expanded=True):
+                      platform_value = card.get("platform", "Facebook")
+                      platform_index = platform_options.index(platform_value) if platform_value in platform_options else 0
+                      st.session_state["community_cards"][idx]["platform"] = st.selectbox(
+                          "Platform",
+                          platform_options,
+                          index=platform_index,
+                          key=f"community_platform_{idx}",
+                      )
+                      st.session_state["community_cards"][idx]["content_creation"] = st.number_input(
+                          "Content creation",
+                          min_value=0.0,
+                          value=float(card.get("content_creation", 0)),
+                          step=1.0,
+                          key=f"community_content_{idx}",
+                      )
+                      st.session_state["community_cards"][idx]["passive_engagement"] = st.number_input(
+                          "Passive engagement",
+                          min_value=0.0,
+                          value=float(card.get("passive_engagement", 0)),
+                          step=1.0,
+                          key=f"community_passive_{idx}",
+                      )
+                      st.session_state["community_cards"][idx]["active_engagement"] = st.number_input(
+                          "Active engagement",
+                          min_value=0.0,
+                          value=float(card.get("active_engagement", 0)),
+                          step=1.0,
+                          key=f"community_active_{idx}",
+                      )
+                      st.session_state["community_cards"][idx]["amplification"] = st.number_input(
+                          "Amplification",
+                          min_value=0.0,
+                          value=float(card.get("amplification", 0)),
+                          step=1.0,
+                          key=f"community_amp_{idx}",
+                      )
+              if st.form_submit_button("Save Community Inputs"):
+                  st.session_state["community_editor"] = pd.DataFrame(st.session_state["community_cards"])
+                  st.success("Community inputs saved.")
+  
+          community_complete = isinstance(st.session_state.get("community_editor"), pd.DataFrame)
+          st.session_state["wizard_completed"]["Community"] = community_complete
+          if community_complete:
+              if st.button("Next: Review & Calculate"):
+                  go_to_next_step("Community")
+          else:
+              st.info("Provide community platform rows to continue.")
+  
+      elif wizard_step == "Review & Calculate":
+          st.subheader("4. Review & Calculate")
+          campaign_data = st.session_state.get("campaign_info", {})
+          campaign_name = campaign_data.get("campaign_name", "")
+          client = campaign_data.get("campaign_client", "")
+          market = campaign_data.get("campaign_market", "")
+          objective = campaign_data.get("campaign_objective", "")
+          inv = campaign_data.get("campaign_investment", 0.0)
+          st.write(
+              f"- **Campaign:** {campaign_name or 'N/A'}  \n"
+              f"- **Client:** {client or 'N/A'}  \n"
+              f"- **Market:** {market or 'N/A'}  \n"
+              f"- **Objective:** {objective or 'N/A'}  \n"
+              f"- **Investment:** {inv:,.0f}"
